@@ -1,0 +1,84 @@
+#+title: Thresholde Gaussian process model of place maps
+#+PROPERTY: header-args:python :session py :kernel gp-model
+#+PROPERTY: header-args:python+ :async yes
+
+This repository contains code to simulate the model and analyze data related to thresholded Gaussian process model, which is a model of place maps observed in CA1 region of mammalian hippocampus. The model works across commonalities (1, 2, and 3 dimensional place maps), and across species (bats and rodents).
+
+You can find the paper here:
+
+* Quick start
+***** Import the model objects for 1D as follows:
+
+#+begin_src python
+import numpy as np
+from gp_model import GaussField, PlaceField1D, PlaceFieldModel1D, PlaceFieldComparison
+#+end_src
+
+#+RESULTS:
+
+***** We will simulate a dummy data by sampling and thresholding a Gaussian Process to show how to the use of the code. Replace =example_psth= with your neural recording.
+
+#+begin_src python :exports both
+num_cells = 500     # Number of neurons to simulate
+length = 200        # Size of the environment after binning
+res = 0.2           # Resolution of sptial bins
+sigma = 2.5         # Correlation length of the neural activity
+theta = 1           # Threshold value
+
+example_psth = np.maximum(
+    GaussField(num_cells, int(length / res), sigma=sigma / res) - theta, 0
+)
+
+print(" => Shape (N, P) = ", example_psth.shape)
+#+end_src
+
+#+RESULTS:
+:  => Shape (N, P) =  (500, 1000)
+
+***** Set the environment size and load data to =PlaceField1D=. Normalized threshold of the data will be automatically inferred and you can supply predicted correlation length to =PlaceFieldModel1D=.
+
+#+begin_src python :exports both
+# Length of the 1D environment in meters
+L = 200
+data_1D = PlaceField1D(example_psth, L, filtering=0)
+#Filtering treshold rectifies the recording to remove small baseline-noise. We use 'filtering=0.5'.
+
+# Predicted correlation length for data
+sigma_model = 2.5
+model_1D= PlaceFieldModel1D(data_1D, sigma_model, multiple=3)
+print(f" => Inferred theta {model_1D.theta:.2f}")
+#+end_src
+
+#+RESULTS:
+:  => Inferred theta 0.99
+
+***** Once the model is generated and we can use the =PlaceFieldCommparison= class to easily compare the data and model. Refer to the documentation in the code for more comparison features
+
+#+begin_src python :exports both
+comparison = PlaceFieldComparison(data_1D, model_1D)
+comparison.analyze()
+
+field_length_data, field_length_model = comparison('widths')     # returns arrays of widths of all place fields across all cells in model and data
+field_gaps_data, field_gaps_model = comparison('gaps')           # returns arrays of gaps of all place fields across all cells in model and data
+
+print(" => Data mean field size = {:.2f}, Model mean field size = {:.2f}".format(*comparison('widths').mean())) # compares mean length directly
+#+end_src
+
+#+RESULTS:
+:  => Data mean field size = 5.55, Model mean field size = 5.64
+
+***** You can generate the mean Euler characteristic of the neural data as follows and to compare it with the model, you need to normalize the neural PSTH by =data_1D.scaling=.
+
+#+begin_src python :exports both
+data_1D.analyze_euler_characteristic() # Empirical euler characterstic of the data -- for the model we known the Euler characterstic analytically
+data_1D.scaling = (lambda x, y: x / y)(*comparison('max_firing_rates').mean())
+#+end_src
+
+***** Finally, you can repeat the same for 3D place fields by importing:
+
+#+begin_src python
+from gp_model import PlaceField3D, PlaceFieldModel3D, PlaceFieldComparison3D
+#+end_src
+
+* Authors
+[[https://nisch.netlify.app/][Nischal Mainali]], [[https://www.silveira-lab.com/rava-azeredo-da-silveira][Rava Azeredo da Silveira]], [[https://www.buraklab.me/team-2][Yoram Burak]]
