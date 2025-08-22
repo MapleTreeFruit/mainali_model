@@ -79,9 +79,10 @@ class PlaceField2D:
 
         x_slices = PlaceField1D(np.array(slices_x), self.x_length / 10)
         y_slices = PlaceField1D(np.array(slices_y), self.y_length / 10)
-        slice_comparison = PlaceFieldComparison(x_slices, y_slices)
-        slice_comparison.analyze()
-        return slice_comparison
+        return (x_slices, y_slices)
+        # slice_comparison = PlaceFieldComparison(x_slices, y_slices)
+        # slice_comparison.analyze()
+        # return slice_comparison
 
     def _get_euler_characteristic_2d(self, data, filtrations):
         """
